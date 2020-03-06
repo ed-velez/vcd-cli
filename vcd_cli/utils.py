@@ -159,6 +159,19 @@ def task_callback(task):
     click.secho(message, nl=False)
 
 
+class ObjectifiedElementJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, ObjectifiedElement):
+            return str(o)
+        if hasattr(o, '__dict__'):
+            d = o.__dict__.copy()
+            for k in d.keys():
+                if len(d[k]) > 1:
+                    d[k] = [i for i in d[k]]
+            return d
+        return json.JSONEncoder.default(self, o)
+
+
 def stdout(obj, ctx=None, alt_text=None, show_id=False, sort_headers=True):
     global last_message
     last_message = ''
@@ -168,7 +181,13 @@ def stdout(obj, ctx=None, alt_text=None, show_id=False, sort_headers=True):
        ctx.find_root().params['json_output']:
         if isinstance(obj, str):
             o = {'message': obj}
-        text = json.dumps(o, sort_keys=True, indent=4, separators=(',', ': '))
+        text = json.dumps(
+            o,
+            sort_keys=True,
+            indent=4,
+            separators=(',', ': '),
+            cls=ObjectifiedElementJSONEncoder,
+        )
         if sys.version_info[0] < 3:
             text = str(text, 'utf-8')
         if ctx.find_root().params['is_colorized']:
